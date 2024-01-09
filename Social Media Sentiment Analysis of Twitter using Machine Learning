@@ -1,0 +1,148 @@
+from sklearn.model_selection import train_test_split
+import re
+import nltk
+nltk.download('wordnet')
+nltk.download('stopwords')
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+import pandas as pd
+import string
+
+def getsentiment(x):
+    if(x==1):
+        return -1*x
+    else:
+        return x+4
+
+tabledep = pd.read_csv("sentimentdep.csv")
+tabledep["label"] = tabledep["label"].apply(getsentiment)
+coldep = [tabledep["message"],tabledep["label"]]
+headers=["message","sentiment"]
+datadep = pd.concat(coldep, axis=1,keys=headers)
+print(datadep)
+
+tablenorm = pd.read_csv("sentimentnorm.csv",encoding='latin-1',header=None)
+colnorm = [tablenorm[5],tablenorm[0]]
+headers=["message","sentiment"]
+datanorm = pd.concat(colnorm, axis=1,keys=headers)
+print(datanorm)
+
+dataframes = [datadep,datanorm]
+datatotal = pd.concat(dataframes)
+
+print(datatotal)
+
+# data = data.head(5000)
+input_data = datatotal['message']
+output_data = datatotal['sentiment']
+
+
+sentence = []
+
+WordReduced = WordNetLemmatizer()
+
+# Stop Words Set
+stopWordsSet = set(stopwords.words('english'))
+# print(stopWordsSet)
+
+
+# cleaning data
+def data_cleaning(data_sentence):
+    data_sentence = re.sub(r'[^\w\s]','',str(data_sentence))
+    
+    data_sentence = re.sub(r'\s+[a-zA-Z]\s+','',data_sentence)
+
+    data_sentence = re.sub(r'\s\s+','',data_sentence)
+
+    data_sentence = re.sub('((www.[^s]+)| (https?://[^s]))','',data_sentence)
+
+    data_sentence= data_sentence.lower()
+
+    data_sentence = data_sentence.split()
+    
+    data_sentence = [WordReduced.lemmatize(word) for word in data_sentence]
+    
+    data_sentence = [word for word in data_sentence if word not in stopWordsSet]
+    
+    data_sentence = ' '.join(data_sentence)
+    
+    return data_sentence
+
+datatotal["message"] = datatotal["message"].apply(lambda x: data_cleaning(x))
+print("done")
+print("start")
+
+from PIL import Image
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+import matplotlib.pyplot as plt
+
+word_cloud_data = datatotal[datatotal['sentiment'] == -1]['message']
+plt.figure(figsize = (20,20))
+wc_img_data = WordCloud(max_words = 500, width = 1800 , height = 1800).generate(" ".join(word_cloud_data))
+plt.imshow(wc_img_data)
+print("done")
+print("start")
+
+from PIL import Image
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+import matplotlib.pyplot as plt
+
+# print(datatotal)
+# print(datatotal[datatotal["sentiment"] == -1]["message"])
+word_cloud_data = datatotal[datatotal['sentiment'] <= 0]['message']
+plt.figure(figsize = (20,20))
+wc_img_data = WordCloud(max_words = 500, width = 1800 , height = 1800).generate(" ".join(word_cloud_data))
+plt.imshow(wc_img_data)
+print("done")
+print("start")
+
+from PIL import Image
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+import matplotlib.pyplot as plt
+
+# print(datatotal)
+# print(datatotal[datatotal["sentiment"] == -1]["message"])
+word_cloud_data = datatotal[datatotal['sentiment'] == 4]['message']
+plt.figure(figsize = (20,20))
+wc_img_data = WordCloud(max_words = 500, width = 1800 , height = 1800).generate(" ".join(word_cloud_data))
+plt.imshow(wc_img_data)
+print("done")
+from sklearn.model_selection import train_test_split
+input_data = datatotal["message"]
+output_data = datatotal["sentiment"]
+input_train,input_test,output_train,output_test = train_test_split(input_data , output_data, test_size = 0.2,random_state=156654)
+print(input_train.shape)
+print(input_test.shape)
+
+
+# Vectorizing input to input into model
+print("start")
+from sklearn.feature_extraction.text import TfidfVectorizer
+vectoriser= TfidfVectorizer(ngram_range=(1,2),max_features = 500000)
+vectoriser.fit(input_train)
+input_train = vectoriser.transform(input_train)
+input_test = vectoriser.transform(input_test)
+print("done")
+
+print("start")
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+# model = KNeighborsClassifier(n_neighbors=4)
+model = LogisticRegression(C=2,max_iter= 1000,n_jobs=-1)
+print("done")
+# model = DecisionTreeClassifier()
+model.fit(input_train, output_train)
+print("done")
+
+from sklearn import metrics
+from sklearn.metrics import classification_report
+
+output_predicted = model.predict(input_test)
+print("done")
+
+print(classification_report(output_test,output_predicted))
+print("done")
+
+print(metrics.accuracy_score(output_test,output_predicted))
+print("done")
